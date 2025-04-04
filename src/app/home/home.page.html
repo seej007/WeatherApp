@@ -1,0 +1,208 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Weather Forecast</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="refresh()">
+        <ion-icon name="refresh-outline"></ion-icon>
+      </ion-button>
+      <ion-button routerLink="/settings">
+        <ion-icon name="settings-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="ion-padding">
+    <!-- Offline indicator -->
+    <ion-chip *ngIf="isOffline" color="warning">
+      <ion-icon name="cloud-offline-outline"></ion-icon>
+      <ion-label>Offline Mode</ion-label>
+    </ion-chip>
+
+    <!-- Loading spinner -->
+    <div *ngIf="loading" class="ion-text-center">
+      <ion-spinner></ion-spinner>
+      <p>Loading...</p>
+    </div>
+
+    <!-- Error message -->
+    <ion-card *ngIf="error" color="danger">
+      <ion-card-header>
+        <ion-card-title>Error</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        {{ error }}
+        <ion-button expand="block" (click)="refresh()">Try Again</ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Location info -->
+    <ion-card *ngIf="!loading && location && !error">
+      <ion-card-header>
+        <ion-card-title>Current Location</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-grid>
+          <ion-row>
+            <ion-col size="6">
+              <div class="weather-detail">
+                <ion-icon name="location-outline"></ion-icon>
+                <div>
+                  <h3>Latitude</h3>
+                  <p>{{ location.coords.latitude.toFixed(4) }}</p>
+                </div>
+              </div>
+            </ion-col>
+            <ion-col size="6">
+              <div class="weather-detail">
+                <ion-icon name="location-outline"></ion-icon>
+                <div>
+                  <h3>Longitude</h3>
+                  <p>{{ location.coords.longitude.toFixed(4) }}</p>
+                </div>
+              </div>
+            </ion-col>
+          </ion-row>
+          <ion-row *ngIf="location.coords.accuracy">
+            <ion-col size="12">
+              <div class="weather-detail">
+                <ion-icon name="navigate-circle-outline"></ion-icon>
+                <div>
+                  <h3>Accuracy</h3>
+                  <p>{{ location.coords.accuracy.toFixed(0) }} meters</p>
+                </div>
+              </div>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Current Weather -->
+    <ion-card *ngIf="!loading && weather && weather.list && weather.list.length > 0">
+      <ion-card-header>
+        <ion-card-title>Current Weather</ion-card-title>
+        <ion-card-subtitle *ngIf="lastUpdated">
+          Last updated: {{ formatLastUpdated() }}
+        </ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="weather-icon-container">
+          <ion-icon [name]="getWeatherIcon(weather.list[0].weather[0].description)" 
+                    class="weather-icon"></ion-icon>
+          <h2>{{ weather.list[0].weather[0].description }}</h2>
+        </div>
+        
+        <ion-grid>
+          <ion-row>
+            <ion-col size="6">
+              <div class="weather-detail">
+                <ion-icon name="thermometer-outline"></ion-icon>
+                <div>
+                  <h3>Temperature</h3>
+                  <p>{{ getTemperature(weather.list[0].main.temp) }}</p>
+                </div>
+              </div>
+            </ion-col>
+            <ion-col size="6">
+              <div class="weather-detail">
+                <ion-icon name="water-outline"></ion-icon>
+                <div>
+                  <h3>Humidity</h3>
+                  <p>{{ weather.list[0].main.humidity }}%</p>
+                </div>
+              </div>
+            </ion-col>
+          </ion-row>
+          
+          <ion-row>
+            <ion-col size="6">
+              <div class="weather-detail">
+                <ion-icon name="speedometer-outline"></ion-icon>
+                <div>
+                  <h3>Wind</h3>
+                  <p>{{ weather.list[0].wind?.speed }} km/h</p>
+                  <p>{{ weather.list[0].wind?.direction }}</p>
+                </div>
+              </div>
+            </ion-col>
+            <ion-col size="6">
+              <div class="weather-detail">
+                <ion-icon name="sunny-outline"></ion-icon>
+                <div>
+                  <h3>Feels Like</h3>
+                  <p>{{ getTemperature(weather.list[0].feelsLike || weather.list[0].main.temp) }}</p>
+                </div>
+              </div>
+            </ion-col>
+          </ion-row>
+          
+          <ion-row>
+            <ion-col size="6">
+              <div class="weather-detail">
+                <ion-icon name="pulse-outline"></ion-icon>
+                <div>
+                  <h3>Pressure</h3>
+                  <p>{{ weather.list[0].pressure || 'N/A' }} hPa</p>
+                </div>
+              </div>
+            </ion-col>
+            <ion-col size="6">
+              <div class="weather-detail">
+                <ion-icon name="sunny-outline"></ion-icon>
+                <div>
+                  <h3>UV Index</h3>
+                  <p>{{ weather.list[0].uvIndex || 'N/A' }}</p>
+                </div>
+              </div>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+    
+    <!-- Hourly Forecast -->
+    <ion-card *ngIf="!loading && weather && weather.hourlyForecasts && weather.hourlyForecasts.length > 0">
+      <ion-card-header>
+        <ion-card-title>Hourly Forecast</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="hourly-forecast-container">
+          <div class="hourly-item" *ngFor="let hour of weather.hourlyForecasts">
+            <p class="hour">{{ formatHour(hour.dateTime) }}</p>
+            <ion-icon [name]="getWeatherIcon(hour.iconPhrase)" class="hourly-icon"></ion-icon>
+            <p class="temp">{{ getTemperature(hour.temperature.value) }}</p>
+            <p class="rain" *ngIf="hour.precipitationProbability > 0">
+              {{ hour.precipitationProbability }}%
+            </p>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+    
+    <!-- 5-Day Forecast -->
+    <ion-card *ngIf="!loading && weather && weather.dailyForecasts && weather.dailyForecasts.length > 0">
+      <ion-card-header>
+        <ion-card-title>5-Day Forecast</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let day of weather.dailyForecasts">
+            <ion-label>
+              <h2>{{ formatDay(day.date) }}</h2>
+              <p>{{ day.day.iconPhrase }}</p>
+            </ion-label>
+            <ion-icon slot="start" [name]="getWeatherIcon(day.day.iconPhrase)"></ion-icon>
+            <div slot="end" class="daily-temp">
+              <span class="max">{{ getTemperature(day.temperature.maximum.value) }}</span>
+              <span class="min">{{ getTemperature(day.temperature.minimum.value) }}</span>
+            </div>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-button expand="full" (click)="exitApp()">Exit</ion-button>
+  </div>
+</ion-content>
