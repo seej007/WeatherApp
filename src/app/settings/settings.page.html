@@ -9,10 +9,16 @@
 
 <ion-content>
   <ion-list>
-    <ion-item>
-      <ion-label>Temperature Unit</ion-label>
-      <ion-toggle [(ngModel)]="settings.useCelsius"></ion-toggle>
-    </ion-item>
+    <ion-radio-group [(ngModel)]="settings.useCelsius">
+      <ion-item>
+        <ion-label>Celsius (°C)</ion-label>
+        <ion-radio slot="start" [value]="true"></ion-radio>
+      </ion-item>
+      <ion-item>
+        <ion-label>Fahrenheit (°F)</ion-label>
+        <ion-radio slot="start" [value]="false"></ion-radio>
+      </ion-item>
+    </ion-radio-group>
     <ion-item>
       <ion-label>Dark Mode</ion-label>
       <ion-toggle [(ngModel)]="settings.darkMode" (ionChange)="toggleDarkMode()"></ion-toggle>

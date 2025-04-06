@@ -2,10 +2,10 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Geolocation, Position } from '@capacitor/geolocation';
 import { HttpClient } from '@angular/common/http';
 import { App } from '@capacitor/app';
-import { environment } from '../../environments/environment';
 import { SettingsService } from '../services/settings.service';
 import { Subscription } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
+import { weatherAPI } from '../../weatherAPI/weatherAPI';
 
 @Component({
   selector: 'app-home',
@@ -20,6 +20,9 @@ export class HomePage implements OnInit, OnDestroy {
   error: string | null = null;
   isOffline = false;
   lastUpdated: Date | null = null;
+  searchTerm: string = '';
+  searchResults: any[] = [];
+  selectedLocation: any = null;
   
   private networkSubscription: Subscription | null = null;
 
@@ -60,6 +63,41 @@ export class HomePage implements OnInit, OnDestroy {
     if (this.networkSubscription) {
       this.networkSubscription.unsubscribe();
     }
+  }
+
+  async searchLocation() {
+    if (!this.searchTerm || this.searchTerm.trim().length < 2) {
+      return;
+    }
+    
+    try {
+      this.loading = true;
+      
+      
+      const API_KEY = weatherAPI.accuweatherApiKey;
+      const searchUrl = `http://dataservice.accuweather.com/locations/v1/cities/search?apikey=${API_KEY}&q=${encodeURIComponent(this.searchTerm)}`;
+      
+      const results: any[] = (await this.http.get<any[]>(searchUrl).toPromise()) || [];
+      console.log('Location search results:', results);
+      this.error = null;
+      
+      this.searchResults = results || [];
+      this.loading = false;
+    } catch (error) {
+      console.error('Error searching locations:', error);
+      this.error = 'Unable to search for locations. Please try again later.';
+      this.loading = false;
+    }
+  }
+  async selectLocation(location: any) {
+    this.selectedLocation = location;
+    this.searchTerm = location.LocalizedName;
+    this.searchResults = [];
+  }
+
+  async clearSearch() {
+    this.searchTerm = '';
+    this.searchResults = [];
   }
 
   async checkPermissions() {
@@ -129,7 +167,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   async getWeather(lat: number, lon: number) {
     try {
-      const API_KEY = environment.accuweatherApiKey;
+      const API_KEY = weatherAPI.accuweatherApiKey;
       
       console.log('Fetching location key...');
       const locationUrl = `https://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${API_KEY}&q=${lat},${lon}`;
@@ -149,16 +187,22 @@ export class HomePage implements OnInit, OnDestroy {
         throw new Error('Invalid weather response');
       }
       
+      // Fetch 5-day forecast
       console.log('Fetching 5-day forecast...');
       const forecastUrl = `https://dataservice.accuweather.com/forecasts/v1/daily/5day/${locationResponse.Key}?apikey=${API_KEY}&metric=true`;
       const forecastResponse: any = await this.http.get(forecastUrl).toPromise();
-      console.log('Forecast response:', forecastResponse);
+      console.log('Forecast response structure:', Object.keys(forecastResponse || {}));
+      console.log('DailyForecasts exists:', forecastResponse?.DailyForecasts ? 'Yes' : 'No');
+      console.log('DailyForecasts length:', forecastResponse?.DailyForecasts?.length || 0);
       
+      // Fetch hourly forecast
       console.log('Fetching hourly forecast...');
       const hourlyUrl = `https://dataservice.accuweather.com/forecasts/v1/hourly/12hour/${locationResponse.Key}?apikey=${API_KEY}&metric=true`;
       const hourlyResponse: any = await this.http.get(hourlyUrl).toPromise();
-      console.log('Hourly response:', hourlyResponse);
+      console.log('Hourly response is array:', Array.isArray(hourlyResponse));
+      console.log('Hourly response length:', hourlyResponse?.length || 0);
       
+      // Create the weather object
       this.weather = {
         list: [{
           dx_stn_id: locationResponse.Key,
@@ -177,16 +221,31 @@ export class HomePage implements OnInit, OnDestroy {
           pressure: weatherResponse[0]?.Pressure?.Metric?.Value || 0,
           feelsLike: weatherResponse[0]?.RealFeelTemperature?.Metric?.Value || weatherResponse[0].Temperature.Metric.Value,
           uvIndex: weatherResponse[0]?.UVIndex || 0
-        }],
-        dailyForecasts: forecastResponse?.DailyForecasts || [],
-        hourlyForecasts: hourlyResponse || []
+        }]
       };
+      
+      // Add daily forecasts if available
+      if (forecastResponse && forecastResponse.DailyForecasts && forecastResponse.DailyForecasts.length > 0) {
+        console.log('Adding daily forecasts');
+        this.weather.dailyForecasts = forecastResponse.DailyForecasts;
+      } else {
+        console.log('No daily forecasts available');
+      }
+      
+      // Add hourly forecasts if available
+      if (hourlyResponse && Array.isArray(hourlyResponse) && hourlyResponse.length > 0) {
+        console.log('Adding hourly forecasts');
+        this.weather.hourlyForecasts = hourlyResponse;
+      } else {
+        console.log('No hourly forecasts available');
+      }
+      
+      console.log('Final weather object:', this.weather);
       
       // Save the weather data for offline use
       await this.saveWeatherData(this.weather);
       this.lastUpdated = new Date();
       
-      console.log('Weather data:', this.weather);
       this.loading = false;
       this.error = null;
     } catch (error) {

@@ -14,6 +14,31 @@
 
 <ion-content [fullscreen]="true">
   <div class="ion-padding">
+    <ion-item>
+      <ion-input [(ngModel)]="searchTerm" (keyup.enter)="searchLocation()" placeholder="Search"></ion-input>
+      <ion-button fill="clear" slot="end" (click)="searchLocation()">
+        <ion-icon name="search-outline"></ion-icon>
+      </ion-button>
+    </ion-item>
+
+    <ion-list *ngIf="searchResults && searchResults.length > 0">
+      <ion-list-header>
+        <ion-label>Search Results</ion-label>
+       <ion-button fill="clear" slot="end" (click)="clearSearch()">
+          <ion-icon name="close-outline"></ion-icon>
+        </ion-button>
+      </ion-list-header>
+      <ion-item *ngFor="let result of searchResults" button (click)="selectLocation(result)">
+        <ion-icon name="location-outline" slot="start"></ion-icon>
+        <ion-label>
+          {{ result.LocalizedName }} 
+          <span *ngIf="result.AdministrativeArea">, {{ result.AdministrativeArea?.LocalizedName }}</span>
+          <span *ngIf="result.Country">, {{ result.Country?.LocalizedName }}</span>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+
+
     <!-- Offline indicator -->
     <ion-chip *ngIf="isOffline" color="warning">
       <ion-icon name="cloud-offline-outline"></ion-icon>
@@ -162,26 +187,26 @@
       </ion-card-content>
     </ion-card>
     
-    <!-- Hourly Forecast -->
+    <!-- Hourly Forecast with Grid Layout -->
     <ion-card *ngIf="!loading && weather && weather.hourlyForecasts && weather.hourlyForecasts.length > 0">
       <ion-card-header>
         <ion-card-title>Hourly Forecast</ion-card-title>
       </ion-card-header>
       <ion-card-content>
-        <div class="hourly-forecast-container">
+        <div class="hourly-forecast-grid">
           <div class="hourly-item" *ngFor="let hour of weather.hourlyForecasts">
-            <p class="hour">{{ formatHour(hour.dateTime) }}</p>
-            <ion-icon [name]="getWeatherIcon(hour.iconPhrase)" class="hourly-icon"></ion-icon>
-            <p class="temp">{{ getTemperature(hour.temperature.value) }}</p>
-            <p class="rain" *ngIf="hour.precipitationProbability > 0">
-              {{ hour.precipitationProbability }}%
+            <p class="hour">{{ formatHour(hour.DateTime) }}</p>
+            <ion-icon [name]="getWeatherIcon(hour.IconPhrase)" class="hourly-icon"></ion-icon>
+            <p class="temp">{{ getTemperature(hour.Temperature.Value) }}</p>
+            <p class="rain" *ngIf="hour.PrecipitationProbability > 0">
+              {{ hour.PrecipitationProbability }}%
             </p>
           </div>
         </div>
       </ion-card-content>
     </ion-card>
-    
-    <!-- 5-Day Forecast -->
+
+    <!-- 5-Day Forecast - Update property names to match AccuWeather API -->
     <ion-card *ngIf="!loading && weather && weather.dailyForecasts && weather.dailyForecasts.length > 0">
       <ion-card-header>
         <ion-card-title>5-Day Forecast</ion-card-title>
@@ -190,13 +215,13 @@
         <ion-list>
           <ion-item *ngFor="let day of weather.dailyForecasts">
             <ion-label>
-              <h2>{{ formatDay(day.date) }}</h2>
-              <p>{{ day.day.iconPhrase }}</p>
+              <h2>{{ formatDay(day.Date) }}</h2>
+              <p>{{ day.Day.IconPhrase }}</p>
             </ion-label>
-            <ion-icon slot="start" [name]="getWeatherIcon(day.day.iconPhrase)"></ion-icon>
+            <ion-icon slot="start" [name]="getWeatherIcon(day.Day.IconPhrase)"></ion-icon>
             <div slot="end" class="daily-temp">
-              <span class="max">{{ getTemperature(day.temperature.maximum.value) }}</span>
-              <span class="min">{{ getTemperature(day.temperature.minimum.value) }}</span>
+              <span class="max">{{ getTemperature(day.Temperature.Maximum.Value) }}</span>
+              <span class="min">{{ getTemperature(day.Temperature.Minimum.Value) }}</span>
             </div>
           </ion-item>
         </ion-list>

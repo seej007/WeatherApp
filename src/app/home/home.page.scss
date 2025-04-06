@@ -76,3 +76,10 @@ ion-icon[name="thunderstorm-outline"] {
 ion-icon[name="snow-outline"] {
   color: #E0E0E0;
 }
+.hourly-forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+  gap: 12px;
+  margin: 0 -8px;
+  padding: 8px;
+}
